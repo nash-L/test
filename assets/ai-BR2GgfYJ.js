@@ -1,0 +1,1 @@
+var e=`/test/ai.svg`;export{e as t};
