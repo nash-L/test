@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WebView 能力自检测试页</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --border: #d8dce3;
+    --text: #16181d;
+    --text-2: #5a6270;
+    --accent: #0b57d0;
+    --accent-soft: #e8f0fe;
+    --pass: #1e7a3c;
+    --pass-bg: #e6f4ea;
+    --warn: #994d00;
+    --warn-bg: #fdf0e0;
+    --fail: #b3261e;
+    --fail-bg: #fce8e6;
+    --mono: "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    font-size: 15px; line-height: 1.5;
+    padding-bottom: 24px;
+  }
+  header {
+    padding: 18px 16px 12px;
+    border-bottom: 2px solid var(--text);
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+  }
+  header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.2px; }
+  header .sub { color: var(--text-2); font-size: 12.5px; margin-top: 2px; font-family: var(--mono); }
+  main { padding: 14px 12px 0; max-width: 720px; margin: 0 auto; }
+
+  section {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 14px 16px;
+    margin-bottom: 14px;
+  }
+  section h2 {
+    font-size: 15.5px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  section h2 .idx {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; border-radius: 6px;
+    background: var(--accent); color: #fff;
+    font-size: 12px; font-weight: 700; font-family: var(--mono);
+    flex: 0 0 auto;
+  }
+  section .hint { color: var(--text-2); font-size: 12.5px; margin-bottom: 10px; }
+  section code { font-family: var(--mono); font-size: 12.5px; background: #eceef2; padding: 1px 5px; border-radius: 4px; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  button {
+    appearance: none; border: 1.5px solid var(--border); background: #fff;
+    color: var(--text); border-radius: 8px; padding: 9px 14px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  button:active { background: var(--accent-soft); border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { border-color: var(--fail); color: var(--fail); }
+  input[type="number"], input[type="text"], select {
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; font-family: var(--mono);
+    width: 84px; background: #fff; color: var(--text);
+  }
+  input[type="text"].wide { width: 100%; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; word-break: break-all; }
+  th { color: var(--text-2); font-weight: 600; font-size: 11.5px; letter-spacing: 0.4px; white-space: nowrap; }
+  td.mono { font-family: var(--mono); font-size: 12px; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .badge.pass { background: var(--pass-bg); color: var(--pass); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.fail { background: var(--fail-bg); color: var(--fail); }
+  .badge.info { background: var(--accent-soft); color: var(--accent); }
+
+  .kv { font-family: var(--mono); font-size: 12.5px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-top: 8px; word-break: break-all; white-space: pre-wrap; }
+  .swatch { width: 44px; height: 44px; border-radius: 8px; border: 1.5px solid var(--border); flex: 0 0 auto; }
+
+  img.preview { max-width: 100%; max-height: 220px; border: 1.5px solid var(--border); border-radius: 10px; margin-top: 8px; display: block; }
+
+  a.plink {
+    display: inline-block; margin: 4px 6px 4px 0;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); text-decoration: none;
+    border: 1px solid var(--accent-soft); background: var(--accent-soft);
+    padding: 6px 10px; border-radius: 8px;
+  }
+
+  #logbox { background: #101418; color: #d7e2ee; border-radius: 12px; padding: 12px; font-family: var(--mono); font-size: 11.5px; max-height: 260px; overflow-y: auto; margin-top: 6px; }
+  #logbox .t { color: #6f8aa6; margin-right: 6px; }
+  #logbox .ok { color: #6ee7a0; }
+  #logbox .er { color: #ff8a7a; }
+  #logbox .wn { color: #ffc46b; }
+
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--accent); margin-top: 6px; }
+  .foot { text-align: center; color: var(--text-2); font-size: 11.5px; padding: 10px 16px 0; font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WebView 能力自检测试页</h1>
+  <div class="sub" id="envline">启动中…</div>
+</header>
+
+<main>
+
+  <!-- ============ 0. ENV ============ -->
+  <section>
+    <h2><span class="idx">0</span>运行环境</h2>
+    <div class="hint">确认页面运行在目标 WebView 中，且各项基础设置符合预期。</div>
+    <table id="envtable"></table>
+  </section>
+
+  <!-- ============ 1. PERSISTENCE ============ -->
+  <section>
+    <h2><span class="idx">1</span>重启后持久化 <span id="persistSummary"></span></h2>
+    <div class="hint">
+      每次加载自动写入：<code>localStorage</code> 随机 token + 访问计数、一个 Cookie、以及 Canvas 指纹哈希。
+      <b>操作步骤：</b>记下下方数值 → 完全杀掉 App（从最近任务划掉）→ 重新启动 → 打开本页 → 各数值应保持一致且访问计数 +1。
+      若 Cookie 永远显示缺失，请检查 <code>CookieManager.setAcceptCookie(true)</code> 与 cacheMode 设置。
+      若 token 均正常但指纹变化，说明该设备 GPU/Canvas 不具备确定性（属提示信息，不算失败）。
+    </div>
+    <table id="persisttable"></table>
+    <div class="row">
+      <button onclick="resetStoredData()">重置存储数据（然后杀掉并重启 App 以测试首启行为）</button>
+    </div>
+  </section>
+
+  <!-- ============ 2. JS BRIDGE ============ -->
+  <section>
+    <h2><span class="idx">2</span>NativeApp JS 桥接</h2>
+    <div class="hint">验证 <code>addJavascriptInterface(..., "NativeApp")</code>。桥接对象必须存在，且包含 <code>setColor(r,g,b)</code> 与 <code>closeWebView()</code> 两个方法。</div>
+    <div class="row" id="bridgestatus"></div>
+    <div class="row">
+      <span class="swatch" id="swatch" style="background:#0b57d0"></span>
+      <input type="number" id="cr" value="11" min="0" max="255">
+      <input type="number" id="cg" value="87" min="0" max="255">
+      <input type="number" id="cb" value="208" min="0" max="255">
+      <button class="primary" onclick="bridgeSetColor()">调用 NativeApp.setColor</button>
+    </div>
+    <div class="row">
+      <button onclick="bridgeSetColor(228,0,43)">红色</button>
+      <button onclick="bridgeSetColor(0,120,78)">绿色</button>
+      <button onclick="bridgeSetColor(255,255,255)">白色（还原）</button>
+      <button onclick="bridgeSetColor(0,0,0)">黑色</button>
+    </div>
+    <div class="hint" id="setcolorhint">
+      <b>人工核对：</b>调用 setColor 后，由 Native 侧管理的安全区/状态栏填充色必须立即切换为上方的精确 RGB 值。逐个点击预设色验证切换是否即时生效。
+    </div>
+    <div class="row">
+      <button class="danger" onclick="bridgeClose()">调用 NativeApp.closeWebView()</button>
+      <span style="font-size:12px;color:var(--text-2)">预期：隐私确认页关闭。在非隐私页调用可能直接关闭 Activity，请谨慎使用。</span>
+    </div>
+  </section>
+
+  <!-- ============ 3. GEOLOCATION ============ -->
+  <section>
+    <h2><span class="idx">3</span>GPS 定位</h2>
+    <div class="hint">
+      需要 <code>onGeolocationPermissionsShowPrompt</code> 实现 + 定位权限已授予 + GeolocationPermissions 回调打通。
+      首次点击会弹出 Native 权限对话框，授权后等待定位结果。
+    </div>
+    <div class="row">
+      <button class="primary" onclick="getGeo()">获取当前位置</button>
+      <button onclick="watchGeoId===null?startWatch():stopWatch()" id="watchbtn">开始持续监听</button>
+    </div>
+    <div class="kv" id="geoout">尚未定位。</div>
+  </section>
+
+  <!-- ============ 4. FILE CHOOSER ============ -->
+  <section>
+    <h2><span class="idx">4</span>文件选择（相册 / 相机）</h2>
+    <div class="hint">
+      需要 <code>onShowFileChooser</code> 实现。点击按钮必须弹出原生选择面板，含「相册」与「相机」两个选项（按需求规格）。
+      选择/拍摄完成后，图片必须能在 JS 中读取（下方有预览 + 像素级验证）。若预览失败，说明 Native 返回的 uri/MIME 处理有问题。
+    </div>
+    <div class="row">
+      <button class="primary" onclick="document.getElementById('fpick').click()">选择图片（相册 / 相机）</button>
+      <input type="file" id="fpick" accept="image/*" style="display:none">
+      <input type="file" id="fcam" accept="image/*" capture="environment" style="display:none">
+      <button onclick="document.getElementById('fcam').click()">直接调起相机拍摄</button>
+    </div>
+    <div class="kv" id="filemeta">尚未选择文件。</div>
+    <img class="preview" id="fileprev" style="display:none" alt="预览">
+    <div class="row">
+      <canvas id="filecanvas" style="display:none;max-width:100%;border:1px solid var(--border);border-radius:8px"></canvas>
+    </div>
+    <div class="kv" id="filepix" style="display:none"></div>
+  </section>
+
+  <!-- ============ 5. PROTOCOLS ============ -->
+  <section>
+    <h2><span class="idx">5</span>协议处理与系统浏览器外跳</h2>
+    <div class="hint">
+      <code>shouldOverrideUrlLoading</code>：非 http/https 协议以及白名单域名必须用<b>系统浏览器</b>打开，绝不进入本 WebView。
+      白名单（按需求）：line.me、wa.me、qr.kakao.com、tawk.to、works.do、open.kakao.com、signal.me、t.me。
+    </div>
+    <div style="font-weight:600;font-size:12.5px;margin:6px 0 2px">非 http(s) 协议 → 系统浏览器</div>
+    <div>
+      <a class="plink" href="mailto:test@example.com?subject=WebViewTest">mailto: 邮件</a>
+      <a class="plink" href="tel:+8613800000000">tel: 电话</a>
+      <a class="plink" href="sms:+8613800000000">sms: 短信</a>
+      <a class="plink" href="geo:39.9042,116.4074?q=39.9042,116.4074">geo: 地图</a>
+      <a class="plink" href="market://details?id=com.android.chrome">market: 应用商店</a>
+      <a class="plink" href="intent://scan/#Intent;scheme=zxing;package=com.google.zxing.client.android;end">intent://</a>
+    </div>
+    <div style="font-weight:600;font-size:12.5px;margin:10px 0 2px">白名单内 https 域名 → 系统浏览器</div>
+    <div>
+      <a class="plink" href="https://line.me/">https://line.me</a>
+      <a class="plink" href="https://wa.me/8613800000000">https://wa.me</a>
+      <a class="plink" href="https://t.me/telegram">https://t.me</a>
+      <a class="plink" href="https://tawk.to/">https://tawk.to</a>
+      <a class="plink" href="https://open.kakao.com/o/test">https://open.kakao.com</a>
+    </div>
+    <div style="font-weight:600;font-size:12.5px;margin:10px 0 2px">非白名单 https → 必须留在本 WebView 内加载</div>
+    <div>
+      <a class="plink" href="inpage.html">inpage.html（相对路径，应留在 WebView 内）</a>
+      <a class="plink" href="#section-probe">页内锚点（绝不允许外跳）</a>
+    </div>
+    <details>
+      <summary>为什么不放一个绝对地址的外部 http 链接？</summary>
+      <div class="hint">任何指向非白名单站点的绝对 https 链接都会在 WebView 内把本测试页替换掉。请在同目录部署 <code>inpage.html</code> 探针页（一个只打印自身 URL 的小页面）来验证非白名单 https 原位加载。如需临时加一个在线探测地址可以自行添加——但届时需用系统返回键经历史记录返回。</div>
+    </details>
+  </section>
+
+  <!-- ============ 6. MULTI-WINDOW ============ -->
+  <section>
+    <h2><span class="idx">6</span>多窗口 → 系统浏览器外跳</h2>
+    <div class="hint">
+      需要 <code>setSupportMultipleWindows(true)</code> + <code>onCreateWindow</code> 实现。
+      按需求，任何新开窗口都必须转交系统浏览器。若未启用多窗口支持，<code>window.open</code> 会静默替换当前 WebView 页面（本页被刷新）——这就是最直接的失败信号。
+    </div>
+    <div class="row">
+      <button class="primary" onclick="window.open('https://www.example.com/','_blank')">window.open(example.com, _blank)</button>
+      <a class="plink" href="https://www.example.com/" target="_blank" rel="noopener">target=_blank 链接</a>
+    </div>
+    <div class="hint">预期：系统浏览器打开 example.com，本页面保持原样（日志区仍显示本次会话的记录）。</div>
+  </section>
+
+  <!-- ============ 7. BACK / HISTORY ============ -->
+  <section id="backhistory">
+    <h2><span class="idx">7</span>返回键与历史记录行为</h2>
+    <div class="hint">
+      按需求：WebView 有历史记录时，硬件返回键 / 手势返回<b>不得关闭页面</b>，必须执行 <code>goBack()</code> 回退；历史记录耗尽后再按返回才退出应用。
+      先用按钮推入若干合成历史记录，然后按硬件返回键：计数应递减（popstate 触发）且页面保持存活。计数归零后再按返回，应用应直接退出。
+    </div>
+    <div class="row">
+      <button class="primary" onclick="pushPage()">history.pushState（深度 +1）</button>
+      <button onclick="history.back()">history.back()</button>
+      <button onclick="log('INFO','history.length = ' + history.length)">查看 history.length</button>
+    </div>
+    <div class="kv" id="backstate">state 深度：— | history.length：—</div>
+  </section>
+
+  <!-- ============ 8. REPORT ============ -->
+  <section>
+    <h2><span class="idx">8</span>会话日志与报告</h2>
+    <div class="hint">所有自动检测与手动操作都会记录在此。可将文本报告复制到测试记录中。</div>
+    <div class="row">
+      <button onclick="copyReport()">复制文本报告</button>
+    </div>
+    <textarea id="report" class="kv wide" rows="6" style="width:100%" readonly></textarea>
+    <div id="logbox"></div>
+  </section>
+
+  <div class="foot" id="foot"></div>
+</main>
+
+<script>
+"use strict";
+
+/* ===================== 工具函数 ===================== */
+const $ = (id) => document.getElementById(id);
+const now = () => {
+  const d = new Date();
+  return d.toTimeString().slice(0, 8);
+};
+const LOGS = [];
+function log(kind, msg) {
+  LOGS.push({ t: now(), kind, msg });
+  const box = $("logbox");
+  const cls = kind === "OK" ? "ok" : kind === "ERR" ? "er" : kind === "WARN" ? "wn" : "";
+  const line = document.createElement("div");
+  line.innerHTML = '<span class="t">' + now() + '</span><span class="' + cls + '">[' + kind + ']</span> ' + escapeHtml(msg);
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  updateReport();
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function badge(text, cls) { return '<span class="badge ' + cls + '">' + text + '</span>'; }
+function updateReport() {
+  $("report").value =
+    "WebView 测试报告 @ " + new Date().toISOString() + "\n" +
+    "UA: " + navigator.userAgent + "\n" +
+    LOGS.map(l => "[" + l.t + "][" + l.kind + "] " + l.msg).join("\n");
+}
+function copyReport() {
+  const ta = $("report");
+  ta.style.display = "block";
+  ta.focus(); ta.select();
+  let done = false;
+  try { done = document.execCommand("copy"); } catch (e) {}
+  log(done ? "OK" : "WARN", done ? "报告已复制到剪贴板（execCommand）" : "自动复制不可用——请手动长按选择文本复制");
+}
+
+/* ===================== 0. 运行环境 ===================== */
+(function env() {
+  const rows = [
+    ["User Agent", navigator.userAgent],
+    ["平台", navigator.platform || "n/a"],
+    ["屏幕", screen.width + "×" + screen.height + " @ " + (window.devicePixelRatio || 1) + "x"],
+    ["视口", window.innerWidth + "×" + window.innerHeight],
+    ["协议 / 源", location.protocol + "  " + (location.origin && location.origin !== "null" ? location.origin : "file:（file:// 下 Cookie 不会持久化）")],
+    ["网络状态", navigator.onLine ? "在线" : "离线"],
+    ["Geolocation API", ("geolocation" in navigator) ? badge("存在", "pass") : badge("缺失", "fail")],
+    ["多窗口支持", "通过测试 6 验证"],
+    ["localStorage", lsAvailable() ? badge("可用", "pass") : badge("被禁用", "fail")],
+    ["sessionStorage", ssAvailable() ? badge("可用", "pass") : badge("被禁用", "fail")],
+  ];
+  $("envtable").innerHTML = rows.map(r =>
+    "<tr><th>" + r[0] + "</th><td class='mono'>" + (typeof r[1] === "string" ? escapeHtml(r[1]) : r[1]) + "</td></tr>").join("");
+  $("envline").textContent = location.protocol + " · " + new Date().toLocaleString("zh-CN");
+  $("foot").textContent = "WebView 能力自检测试页 · v1.0 · 零外部依赖，支持离线加载";
+  log("INFO", "环境信息已采集。Origin=" + location.protocol);
+})();
+
+function lsAvailable() { try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return true; } catch (e) { return false; } }
+function ssAvailable() { try { sessionStorage.setItem("__t", "1"); sessionStorage.removeItem("__t"); return true; } catch (e) { return false; } }
+
+/* ===================== 1. 持久化 ===================== */
+const LS_TOKEN = "wvtest_ls_token";
+const LS_FIRST = "wvtest_first_seen";
+const LS_VISITS = "wvtest_visits";
+const LS_FP = "wvtest_canvas_fp";
+const CK_TOKEN = "wvtest_ck_token";
+
+function setCookie(name, value) {
+  try {
+    document.cookie = name + "=" + encodeURIComponent(value) + "; Max-Age=31536000; path=/; SameSite=Lax";
+    return getCookie(name) === value;
+  } catch (e) { return false; }
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function fnv1a(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return ("0000000" + h.toString(16)).slice(-8);
+}
+
+function canvasFingerprint() {
+  const c = document.createElement("canvas");
+  c.width = 240; c.height = 60;
+  const ctx = c.getContext("2d");
+  ctx.textBaseline = "alphabetic";
+  const g = ctx.createLinearGradient(0, 0, 240, 60);
+  g.addColorStop(0, "#f0a"); g.addColorStop(0.5, "#0af"); g.addColorStop(1, "#7f0");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 240, 60);
+  ctx.fillStyle = "rgba(20,20,20,0.85)";
+  ctx.font = "17px 'Arial'";
+  ctx.fillText("Fingerprint ⚡ 指纹 <canvas>", 4, 24);
+  ctx.font = "13px 'Times New Roman'";
+  ctx.fillStyle = "rgb(255,255,255)";
+  ctx.fillText("wg:rgba(1,2,3,0.5) · " + (navigator.userAgent.length % 100), 4, 46);
+  ctx.beginPath(); ctx.arc(210, 18, 12, 0, Math.PI * 1.5); ctx.strokeStyle = "#111"; ctx.lineWidth = 3; ctx.stroke();
+  return fnv1a(c.toDataURL());
+}
+
+function renderPersistRow(name, status, cls, detail) {
+  return "<tr><th>" + name + "</th><td>" + badge(status, cls) + "</td><td class='mono'>" + escapeHtml(detail) + "</td></tr>";
+}
+
+(function persistence() {
+  const rows = [];
+  let summaryOk = true;
+
+  // localStorage token + 访问计数 + 首次访问时间
+  let lsOld = null, visits = 0, first = null;
+  try {
+    lsOld = localStorage.getItem(LS_TOKEN);
+    visits = parseInt(localStorage.getItem(LS_VISITS) || "0", 10) + 1;
+    first = localStorage.getItem(LS_FIRST);
+    localStorage.setItem(LS_VISITS, String(visits));
+    if (!lsOld) { lsOld = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(LS_TOKEN, lsOld); }
+    if (!first) { first = new Date().toISOString(); localStorage.setItem(LS_FIRST, first); }
+  } catch (e) {
+    log("ERR", "localStorage 不可用: " + e.message);
+    summaryOk = false;
+  }
+  rows.push(renderPersistRow("localStorage token", lsOld ? "已存储" : "失败", lsOld ? "pass" : "fail", lsOld || "—"));
+  rows.push(renderPersistRow("访问计数", visits > 1 ? "已持久化" : "首次运行", visits > 1 ? "pass" : "info", "第 " + visits + " 次访问 · 首次见于 " + (first || "—")));
+
+  // Cookie
+  let ckOld = getCookie(CK_TOKEN);
+  const ckNew = ckOld || Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const ckWritten = setCookie(CK_TOKEN, ckNew);
+  if (location.protocol === "file:") {
+    rows.push(renderPersistRow("Cookie", "已跳过", "warn", "file:// 源下 document.cookie 不可用；请改用 http(s) 加载以测试 Cookie"));
+    log("WARN", "页面通过 file:// 加载——Cookie 测试已跳过（file 源下属预期行为）");
+  } else if (!ckWritten) {
+    rows.push(renderPersistRow("Cookie", "写入失败", "fail", "请检查 CookieManager.setAcceptCookie(true) / cacheMode"));
+    log("ERR", "Cookie 写入失败——CookieManager 可能禁用了 Cookie");
+    summaryOk = false;
+  } else {
+    rows.push(renderPersistRow("Cookie", ckOld ? "已持久化" : "已存储", ckOld ? "pass" : "info", ckNew));
+    log(ckOld ? "OK" : "INFO", ckOld ? "Cookie 从上次会话持久化成功: " + ckOld : "Cookie 已写入: " + ckNew);
+  }
+
+  // Canvas 指纹
+  let fpNow = null, fpOld = null;
+  try {
+    fpNow = canvasFingerprint();
+    fpOld = localStorage.getItem(LS_FP);
+    localStorage.setItem(LS_FP, fpNow);
+  } catch (e) { log("ERR", "Canvas 指纹生成失败: " + e.message); }
+  if (fpNow) {
+    if (!fpOld) {
+      rows.push(renderPersistRow("Canvas 指纹", "已存储", "info", fpNow));
+      log("INFO", "Canvas 指纹已存储: " + fpNow);
+    } else if (fpOld === fpNow) {
+      rows.push(renderPersistRow("Canvas 指纹", "一致", "pass", fpNow));
+      log("OK", "Canvas 指纹跨会话保持一致: " + fpNow);
+    } else {
+      rows.push(renderPersistRow("Canvas 指纹", "已变化", "warn", "旧=" + fpOld + " 新=" + fpNow + "（设备 GPU 非确定性——属提示信息，不算 WebView 失败）"));
+      log("WARN", "Canvas 指纹跨会话发生变化（提示信息）");
+    }
+  }
+
+  $("persisttable").innerHTML = rows.join("");
+  $("persistSummary").innerHTML = summaryOk ? badge("按步骤操作", "info") : badge("查看日志", "fail");
+  if (visits > 1) log("OK", "第 " + visits + " 次访问——若上方 token 与重启前记录一致，则持久化测试通过");
+})();
+
+function resetStoredData() {
+  try {
+    [LS_TOKEN, LS_FIRST, LS_VISITS, LS_FP].forEach(k => localStorage.removeItem(k));
+    document.cookie = CK_TOKEN + "=; Max-Age=0; path=/";
+    log("WARN", "存储数据已重置。请完全杀掉并重启 App 以测试真实首次启动行为。");
+    setTimeout(() => location.reload(), 600);
+  } catch (e) { log("ERR", "重置失败: " + e.message); }
+}
+
+/* ===================== 2. 桥接 ===================== */
+function bridgePresent() {
+  return typeof window.NativeApp !== "undefined" && window.NativeApp !== null;
+}
+(function bridgeCheck() {
+  const el = $("bridgestatus");
+  if (bridgePresent()) {
+    const hasColor = typeof window.NativeApp.setColor === "function";
+    const hasClose = typeof window.NativeApp.closeWebView === "function";
+    el.innerHTML =
+      badge("桥接存在", hasColor && hasClose ? "pass" : "warn") + " " +
+      badge("setColor: " + (hasColor ? "有" : "缺失"), hasColor ? "pass" : "fail") + " " +
+      badge("closeWebView: " + (hasClose ? "有" : "缺失"), hasClose ? "pass" : "fail");
+    log(hasColor && hasClose ? "OK" : "WARN",
+      "检测到 NativeApp 桥接。setColor=" + hasColor + " closeWebView=" + hasClose);
+  } else {
+    el.innerHTML = badge("未找到 NativeApp", "fail");
+    log("ERR", "window.NativeApp 未定义——addJavascriptInterface 缺失，或页面在注入完成前加载");
+  }
+})();
+
+function bridgeSetColor(r, g, b) {
+  if (r === undefined) {
+    r = clamp255($("cr").value); g = clamp255($("cg").value); b = clamp255($("cb").value);
+  }
+  const hex = "#" + [r, g, b].map(v => clamp255(v).toString(16).padStart(2, "0")).join("");
+  $("swatch").style.background = hex;
+  $("cr").value = r; $("cg").value = g; $("cb").value = b;
+  if (!bridgePresent()) { log("ERR", "setColor 已中止——桥接缺失"); return; }
+  try {
+    window.NativeApp.setColor(clamp255(r), clamp255(g), clamp255(b));
+    log("OK", "已调用 NativeApp.setColor(" + r + "," + g + "," + b + ") → " + hex + " ——请确认 Native 安全区填充色已变化");
+  } catch (e) { log("ERR", "setColor 抛出异常: " + e.message); }
+}
+function clamp255(v) { return Math.max(0, Math.min(255, parseInt(v || "0", 10) || 0)); }
+
+function bridgeClose() {
+  if (!bridgePresent()) { log("ERR", "closeWebView 已中止——桥接缺失"); return; }
+  try {
+    log("WARN", "正在调用 NativeApp.closeWebView()——页面应关闭，具体行为取决于 Native 实现");
+    window.NativeApp.closeWebView();
+  } catch (e) { log("ERR", "closeWebView 抛出异常: " + e.message); }
+}
+
+/* ===================== 3. 定位 ===================== */
+function geoFmt(pos) {
+  const c = pos.coords;
+  return "纬度:  " + c.latitude.toFixed(6) + "\n" +
+         "经度:  " + c.longitude.toFixed(6) + "\n" +
+         "精度:  ±" + (c.accuracy != null ? c.accuracy.toFixed(0) : "?") + " 米" +
+         (c.altitude != null ? "\n海拔:  " + c.altitude.toFixed(1) + " 米" : "") +
+         (c.speed != null && c.speed !== null ? "\n速度:  " + c.speed.toFixed(2) + " 米/秒" : "") +
+         "\n时间: " + new Date(pos.timestamp).toLocaleString("zh-CN");
+}
+function getGeo() {
+  if (!("geolocation" in navigator)) { log("ERR", "geolocation API 不存在"); $("geoout").textContent = "geolocation API 不存在"; return; }
+  $("geoout").textContent = "正在请求定位（请在弹出的权限对话框中允许）…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { $("geoout").textContent = geoFmt(pos); log("OK", "定位成功: " + pos.coords.latitude.toFixed(5) + "," + pos.coords.longitude.toFixed(5) + " ±" + pos.coords.accuracy.toFixed(0) + "米"); },
+    (err) => { $("geoout").textContent = "错误码 " + err.code + ": " + err.message; log("ERR", "定位失败，错误码 " + err.code + ": " + err.message + (err.code === 1 ? "（权限被拒——请检查 onGeolocationPermissionsShowPrompt 与运行时权限）" : "")); },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+  );
+}
+let watchGeoId = null;
+function startWatch() {
+  if (!("geolocation" in navigator)) return;
+  watchGeoId = navigator.geolocation.watchPosition(
+    (pos) => { $("geoout").textContent = geoFmt(pos); },
+    (err) => log("ERR", "持续监听出错: " + err.message),
+    { enableHighAccuracy: true }
+  );
+  $("watchbtn").textContent = "停止监听";
+  log("INFO", "watchPosition 已启动");
+}
+function stopWatch() {
+  if (watchGeoId !== null) { navigator.geolocation.clearWatch(watchGeoId); watchGeoId = null; }
+  $("watchbtn").textContent = "开始持续监听";
+  log("INFO", "watchPosition 已停止");
+}
+
+/* ===================== 4. 文件选择 ===================== */
+function bindFileInput(inputId) {
+  $(inputId).addEventListener("change", (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) { log("WARN", "文件对话框未返回任何文件"); return; }
+    $("filemeta").textContent =
+      "文件名: " + (f.name || "（无文件名）") + "\n" +
+      "类型: " + (f.type || "（未知）") + "\n" +
+      "大小: " + f.size + " 字节（" + (f.size / 1024).toFixed(1) + " KB）\n" +
+      "修改时间: " + (f.lastModified ? new Date(f.lastModified).toISOString() : "n/a");
+    const url = URL.createObjectURL(f);
+    const img = $("fileprev");
+    img.onload = () => {
+      img.style.display = "block";
+      URL.revokeObjectURL(url);
+      // 像素级验证：绘制到 canvas 并采样
+      const cv = $("filecanvas"), cx = cv.getContext("2d");
+      const scale = Math.min(1, 320 / img.naturalWidth);
+      cv.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      cv.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      cx.drawImage(img, 0, 0, cv.width, cv.height);
+      const px = cx.getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data;
+      const fp = fnv1a(cv.toDataURL());
+      $("filepix").style.display = "block";
+      $("filepix").textContent =
+        "解码成功: " + img.naturalWidth + "×" + img.naturalHeight + "\n" +
+        "中心像素 RGBA: " + px[0] + "," + px[1] + "," + px[2] + "," + px[3] + "\n" +
+        "内容哈希: " + fp;
+      log("OK", "图片可在 JS 中读取: " + img.naturalWidth + "×" + img.naturalHeight + ", 类型=" + f.type + ", " + (f.size / 1024).toFixed(1) + "KB");
+    };
+    img.onerror = () => {
+      img.style.display = "none";
+      log("ERR", "图片解码失败——类型=" + f.type + " 大小=" + f.size + "（选择器可能返回了非图片 uri）");
+    };
+    img.src = url;
+  });
+}
+bindFileInput("fpick");
+bindFileInput("fcam");
+log("INFO", "文件输入已绑定。JS FileReader / URL.createObjectURL 可用: " + (typeof URL.createObjectURL === "function" && typeof FileReader === "function"));
+
+/* ===================== 6/7. 多窗口 + 历史 ===================== */
+(function historyPanel() {
+  let depth = 0;
+  window.addEventListener("popstate", (ev) => {
+    depth = (ev.state && typeof ev.state.d === "number") ? ev.state.d : 0;
+    $("backstate").textContent = "state 深度：" + depth + " | history.length：" + history.length;
+    log("OK", "popstate 触发 → 硬件返回键执行了 WebView goBack（深度=" + depth + "）。页面必须仍然存活。");
+  });
+  window.pushPage = function () {
+    depth++;
+    history.pushState({ d: depth }, "", "#depth" + depth);
+    $("backstate").textContent = "state 深度：" + depth + " | history.length：" + history.length;
+    log("INFO", "pushState → 深度 " + depth + "，history.length=" + history.length + "。现在请按硬件返回键。");
+  };
+  $("backstate").textContent = "state 深度：0 | history.length：" + history.length;
+  log("INFO", "历史测试就绪。推入 2–3 条记录后按硬件返回键/手势：页面应 goBack 而非关闭。深度为 0 时再按返回则退出应用（按需求）。");
+})();
+</script>
+</body>
+</html>
