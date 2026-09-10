@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="UBa3TOvLI0koD7xxkawqd6">
+<head data-page-node-id="lw64tsDdGDg0x8IREZ5CFY">
+<meta charset="utf-8" data-page-node-id="WmNnDtev4CJoG9MV5rg28H">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="Hk9eNhyl075EfvgfgsUuT5">
+<title>WebView 内加载探针页</title>
+<style>
+  body { font-family: -apple-system, Roboto, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; background: #fff; color: #16181d; margin: 0; padding: 24px 16px; }
+  .card { border: 1.5px solid #d8dce3; border-radius: 12px; padding: 16px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 18px; margin-bottom: 8px; }
+  code { font-family: Menlo, Consolas, monospace; font-size: 13px; background: #eceef2; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+  p { color: #5a6270; font-size: 13.5px; line-height: 1.6; }
+  a { color: #0b57d0; font-weight: 600; }
+</style>
+</head>
+<body data-page-node-id="U87aXapaZeJE9PyjXyyizC">
+<div class="card" data-page-node-id="D6gFNS2UTZiFFRhFgZUTE7">
+  <h1 data-page-node-id="3vly2jfAp8wJU10trotfb1">✅ 已在 WebView 内原位加载</h1>
+  <p data-page-node-id="SOZgHPuA050T375Yl1k1AZ">如果你能看到本页，且下方 URL 是探针页自身的地址（而不是跳到了外部浏览器），说明非白名单 http(s) 地址正确地在 WebView 内原位加载，没有被外跳。</p>
+  <p data-page-node-id="9DZanHA1UOwGF7833YodZ0">URL：<code id="u" data-page-node-id="DQE0GieQSaSSFZPpI1CVaz">—</code></p>
+  <p data-page-node-id="iMLxAVWjssNUQEB9y7H0yg">Referrer：<code id="r" data-page-node-id="cVDMTsdkgdU9B7lGL4CgkE">—</code></p>
+  <p data-page-node-id="v85DwuFpypRLCiPwcpshBF"><a href="webview-test.html" data-page-node-id="meznzmmIgCjhANVHMXdGN8">← 返回测试主页</a></p>
+</div>
+<script>
+document.getElementById("u").textContent = location.href;
+document.getElementById("r").textContent = document.referrer || "（无）";
+</script>
+</body>
+</html>
